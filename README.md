@@ -32,7 +32,8 @@ wget https://github.com/copy/v86/releases/download/latest/v86.wasm
 Download the BIOS files and place them in the `bios/` directory:
 
 ```bash
-# Download BIOS files
+# Create bios directory and download BIOS files
+mkdir -p bios
 cd bios
 wget https://github.com/copy/v86/raw/master/bios/seabios.bin
 wget https://github.com/copy/v86/raw/master/bios/vgabios.bin
