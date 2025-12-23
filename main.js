@@ -2,7 +2,9 @@
 
 let emulator = null;
 
-// Configuration: CORS proxy settings
+// Configuration: Image source and CORS proxy settings
+const IMAGE_URL = 'https://github.com/sriail/file-serving/releases/download/browser-packages/alpine-midori.img.gz';
+
 // GitHub releases don't support CORS, so we use a public CORS proxy by default
 const USE_CORS_PROXY = true;
 const CORS_PROXY_URLS = [
@@ -113,11 +115,8 @@ async function startEmulator() {
     try {
         console.log('Starting emulator with RAM:', ramMB, 'MB, VRAM:', vramMB, 'MB');
         
-        // URL of the compressed image file
-        const imageUrl = 'https://github.com/sriail/file-serving/releases/download/browser-packages/alpine-midori.img.gz';
-        
         // Download and decompress the image (CORS proxy handled in fetchAndDecompress)
-        const imgBuffer = await fetchAndDecompress(imageUrl);
+        const imgBuffer = await fetchAndDecompress(IMAGE_URL);
         
         console.log('Image decompressed, size:', imgBuffer.byteLength, 'bytes');
         
