@@ -90,19 +90,21 @@
                     const controller = new AbortController();
                     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
                     
-                    const response = await fetch(fullUrl, {
-                        method: 'HEAD', // Use HEAD to avoid downloading the entire file
-                        mode: 'cors',
-                        credentials: 'omit',
-                        signal: controller.signal
-                    });
-                    
-                    clearTimeout(timeoutId);
-                    
-                    if (response.ok) {
-                        addResult(`✓ Success! Proxy ${i + 1} is working (Status: ${response.status})`, 'success');
-                    } else {
-                        addResult(`✗ Proxy ${i + 1} failed with status: ${response.status}`, 'error');
+                    try {
+                        const response = await fetch(fullUrl, {
+                            method: 'HEAD', // Use HEAD to avoid downloading the entire file
+                            mode: 'cors',
+                            credentials: 'omit',
+                            signal: controller.signal
+                        });
+                        
+                        if (response.ok) {
+                            addResult(`✓ Success! Proxy ${i + 1} is working (Status: ${response.status})`, 'success');
+                        } else {
+                            addResult(`✗ Proxy ${i + 1} failed with status: ${response.status}`, 'error');
+                        }
+                    } finally {
+                        clearTimeout(timeoutId);
                     }
                 } catch (error) {
                     addResult(`✗ Proxy ${i + 1} failed: ${error.message}`, 'error');

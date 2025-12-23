@@ -79,7 +79,7 @@ async function fetchAndDecompress(url) {
                 mode: 'cors',
                 credentials: 'omit',
                 headers: {
-                    'Accept': '*/*'
+                    'Accept': 'application/gzip, application/octet-stream'
                 }
             });
             
