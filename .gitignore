@@ -1,0 +1,22 @@
+# v86 Emulator Files
+libv86.js
+v86.wasm
+
+# BIOS Files
+bios/seabios.bin
+bios/vgabios.bin
+
+# OS Images
+images/*.img
+images/*.img.gz
+
+# Node modules (if using npm/package manager)
+node_modules/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
