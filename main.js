@@ -10,7 +10,7 @@ const IMAGE_URL = 'https://github.com/sriail/file-serving/releases/download/brow
 const CORS_PROXY_URLS = [
     'https://corsproxy.io/?',                    // corsproxy.io - reliable and fast
     'https://api.allorigins.win/raw?url=',       // allorigins.win - good fallback
-    'https://cors-anywhere.herokuapp.com/',      // cors-anywhere - popular option
+    // Note: cors-anywhere may have rate limits on public deployments
 ];
 
 // Function to update status message
@@ -23,6 +23,11 @@ function updateStatus(message, show = true) {
 // Function to fetch and decompress the .img.gz file
 async function fetchAndDecompress(url) {
     updateStatus('Downloading image file...');
+    
+    // Validate URL for security (must be HTTPS from expected domain)
+    if (!url.startsWith('https://github.com/sriail/file-serving/')) {
+        throw new Error('Invalid or unauthorized image URL');
+    }
     
     // List of URLs to try with CORS proxies
     const urlsToTry = [];
