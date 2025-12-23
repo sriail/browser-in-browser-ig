@@ -9,38 +9,13 @@ A simple web-based x86 emulator using v86 that loads and runs Alpine Linux with 
 - Configurable RAM (32MB - 512MB)
 - Configurable VRAM (2MB - 32MB)
 - Simple, user-friendly interface
+- **All required v86 and BIOS files included** - no manual downloads needed!
 
 ## Setup Instructions
 
-### 1. Download v86 Library Files
+**Note:** All required v86 library files and BIOS files are now included in the repository. You can start using the emulator immediately after cloning!
 
-Download the v86 library files from the [v86 releases page](https://github.com/copy/v86/releases):
-
-1. Download `libv86.js` and place it in the root directory
-2. Download `v86.wasm` and place it in the root directory
-
-Or use these direct commands:
-
-```bash
-# Download v86 library files
-wget https://github.com/copy/v86/releases/download/latest/libv86.js
-wget https://github.com/copy/v86/releases/download/latest/v86.wasm
-```
-
-### 2. Download BIOS Files
-
-Download the BIOS files and place them in the `bios/` directory:
-
-```bash
-# Create bios directory and download BIOS files
-mkdir -p bios
-cd bios
-wget https://github.com/copy/v86/raw/master/bios/seabios.bin
-wget https://github.com/copy/v86/raw/master/bios/vgabios.bin
-cd ..
-```
-
-### 3. Run a Local Web Server
+### 1. Run a Local Web Server
 
 Due to browser security restrictions with WebAssembly and CORS, you need to serve the files through a web server:
 
@@ -59,7 +34,7 @@ Using PHP:
 php -S localhost:8000
 ```
 
-### 4. Open in Browser
+### 2. Open in Browser
 
 Navigate to `http://localhost:8000` in your web browser.
 
@@ -84,11 +59,11 @@ Navigate to `http://localhost:8000` in your web browser.
 /
 ├── index.html          # Main HTML page with UI
 ├── main.js            # Emulator initialization logic
-├── libv86.js          # v86 library (download separately)
-├── v86.wasm           # v86 WebAssembly module (download separately)
+├── libv86.js          # v86 library (included)
+├── v86.wasm           # v86 WebAssembly module (included)
 ├── bios/
-│   ├── seabios.bin   # BIOS file (download separately)
-│   └── vgabios.bin   # VGA BIOS file (download separately)
+│   ├── seabios.bin   # BIOS file (included)
+│   └── vgabios.bin   # VGA BIOS file (included)
 └── images/           # Optional: for local OS images
 ```
 

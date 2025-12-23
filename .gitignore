@@ -1,11 +1,3 @@
-# v86 Emulator Files
-libv86.js
-v86.wasm
-
-# BIOS Files
-bios/seabios.bin
-bios/vgabios.bin
-
 # OS Images
 images/*.img
 images/*.img.gz
