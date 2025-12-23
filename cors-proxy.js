@@ -80,9 +80,8 @@ const server = http.createServer((req, res) => {
         'access-control-allow-credentials',
         'connection',
         'keep-alive',
-        'transfer-encoding',
-        'content-encoding', // Will be handled by the stream
-        'content-length'    // Will be recalculated by Node.js
+        'transfer-encoding'
+        // Note: content-encoding and content-length are preserved for proper handling
       ];
       
       for (const [key, value] of Object.entries(targetRes.headers)) {
