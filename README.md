@@ -84,27 +84,83 @@ Navigate to `http://localhost:8000` in your web browser.
 
 ## Troubleshooting CORS Issues
 
-If you encounter CORS (Cross-Origin Resource Sharing) errors when downloading the OS image:
+**Important:** GitHub releases do not send CORS headers (`Access-Control-Allow-Origin`), which prevents browsers from downloading files directly from cross-origin requests. This is a security feature of browsers.
 
-1. **Enable CORS on your local server:**
-   - For `http-server` (Node.js): Use `npx http-server -p 8000 --cors`
-   - For Python: The built-in server doesn't easily support CORS headers, consider using `http-server` instead
-   - For Apache: The `.htaccess` file in this repository will automatically enable CORS
-   
-2. **Check browser console:** Look for specific error messages about "Access-Control-Allow-Origin"
+If you encounter CORS (Cross-Origin Resource Sharing) errors when downloading the OS image, use one of these solutions:
 
-3. **Alternative solution - Use a CORS proxy:**
-   If the GitHub releases URL is blocked by CORS, you can modify `main.js` to use a CORS proxy service like:
-   ```javascript
-   const imageUrl = 'https://cors-anywhere.herokuapp.com/https://github.com/sriail/file-serving/releases/download/browser-packages/alpine-midori.img.gz';
+### Solution 1: Use the Built-in CORS Proxy (Recommended for Development)
+
+This repository includes a simple CORS proxy server that you can run locally:
+
+1. **Start the CORS proxy server** (in a separate terminal):
+   ```bash
+   node cors-proxy.js
    ```
-   Note: Public CORS proxies may have rate limits. Consider setting up your own CORS proxy for production use.
+   This will start a proxy server on `http://localhost:8080`
 
-4. **Download image locally:**
-   You can download the image file manually and place it in a local `images/` directory, then update the URL in `main.js` to point to the local file:
+2. **Enable the proxy in main.js**:
+   Open `main.js` and change:
+   ```javascript
+   const USE_CORS_PROXY = false;
+   ```
+   to:
+   ```javascript
+   const USE_CORS_PROXY = true;
+   ```
+
+3. **Start the web server** (in another terminal):
+   ```bash
+   npx http-server -p 8000 --cors
+   ```
+
+4. **Open in browser**: Navigate to `http://localhost:8000`
+
+### Solution 2: Use http-server with CORS enabled
+
+The simplest solution is to use `http-server` with CORS enabled:
+
+```bash
+npx http-server -p 8000 --cors
+```
+
+Note: This enables CORS for your local server but doesn't solve the GitHub releases CORS issue. You still need the CORS proxy.
+
+### Solution 3: Download the Image Locally
+
+Download the image file manually and serve it locally:
+
+1. **Download the image**:
+   ```bash
+   mkdir -p images
+   curl -L -o images/alpine-midori.img.gz https://github.com/sriail/file-serving/releases/download/browser-packages/alpine-midori.img.gz
+   ```
+
+2. **Update main.js**:
+   Change the image URL to:
    ```javascript
    const imageUrl = 'images/alpine-midori.img.gz';
    ```
+
+3. **Start the server**:
+   ```bash
+   npx http-server -p 8000 --cors
+   ```
+
+### Solution 4: Use a Public CORS Proxy (Not Recommended for Production)
+
+Modify `main.js` to use a public CORS proxy service:
+```javascript
+const imageUrl = 'https://cors-anywhere.herokuapp.com/https://github.com/sriail/file-serving/releases/download/browser-packages/alpine-midori.img.gz';
+```
+
+**Warning**: Public CORS proxies have rate limits and are not reliable for production use.
+
+### Why Does This Happen?
+
+- GitHub releases (`github.com`) don't include `Access-Control-Allow-Origin` headers in their responses
+- Browsers block cross-origin requests that lack proper CORS headers for security reasons
+- The error appears as `ERR_BLOCKED_BY_CLIENT` or `Failed to fetch` in the console
+- This affects all browsers (Chrome, Firefox, Safari, Edge) due to the Same-Origin Policy
 
 ## License
 

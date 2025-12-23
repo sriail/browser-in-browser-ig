@@ -2,6 +2,12 @@
 
 let emulator = null;
 
+// Configuration: Set to true to use local CORS proxy
+// If you're experiencing CORS issues, start the cors-proxy.js server with:
+// node cors-proxy.js
+const USE_CORS_PROXY = false;
+const CORS_PROXY_URL = 'http://localhost:8080/';
+
 // Function to update status message
 function updateStatus(message, show = true) {
     const statusDiv = document.getElementById('status');
@@ -68,7 +74,13 @@ async function startEmulator() {
         console.log('Starting emulator with RAM:', ramMB, 'MB, VRAM:', vramMB, 'MB');
         
         // URL of the compressed image file
-        const imageUrl = 'https://github.com/sriail/file-serving/releases/download/browser-packages/alpine-midori.img.gz';
+        let imageUrl = 'https://github.com/sriail/file-serving/releases/download/browser-packages/alpine-midori.img.gz';
+        
+        // If CORS proxy is enabled, prepend the proxy URL
+        if (USE_CORS_PROXY) {
+            imageUrl = CORS_PROXY_URL + imageUrl;
+            console.log('Using CORS proxy:', imageUrl);
+        }
         
         // Download and decompress the image
         const imgBuffer = await fetchAndDecompress(imageUrl);
