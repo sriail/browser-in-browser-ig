@@ -101,6 +101,15 @@ async function startEmulator() {
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
     const startButton = document.getElementById('startButton');
+    
+    // Check for DecompressionStream support
+    if (typeof DecompressionStream === 'undefined') {
+        updateStatus('Error: Your browser does not support DecompressionStream API. Please use a modern browser (Chrome 80+, Edge 80+, Safari 16.4+, Firefox 113+).');
+        startButton.disabled = true;
+        console.error('DecompressionStream API not supported');
+        return;
+    }
+    
     startButton.addEventListener('click', startEmulator);
     
     console.log('Page loaded, ready to start emulator');
