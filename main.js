@@ -24,9 +24,28 @@ function updateStatus(message, show = true) {
 async function fetchAndDecompress(url) {
     updateStatus('Downloading image file...');
     
-    // Validate URL for security (must be HTTPS from expected domain, or a local path)
-    const isLocalPath = !url.startsWith('http://') && !url.startsWith('https://');
-    const isValidRemote = url.startsWith('https://github.com/sriail/file-serving/');
+    // Validate URL for security
+    let isLocalPath = false;
+    let isValidRemote = false;
+    
+    // First check if it looks like a local path (no protocol)
+    if (!url.includes('://')) {
+        isLocalPath = true;
+    } else {
+        // It has a protocol, so validate as remote URL
+        try {
+            const parsedUrl = new URL(url);
+            
+            // Check if it's a valid remote URL - must be HTTPS from specific GitHub path
+            if (parsedUrl.protocol === 'https:' &&
+                parsedUrl.hostname === 'github.com' && 
+                parsedUrl.pathname.startsWith('/sriail/file-serving/releases/download/')) {
+                isValidRemote = true;
+            }
+        } catch (e) {
+            // Invalid URL - will be rejected
+        }
+    }
     
     if (!isLocalPath && !isValidRemote) {
         throw new Error('Invalid or unauthorized image URL');
