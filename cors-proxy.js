@@ -53,11 +53,15 @@ const server = http.createServer((req, res) => {
       path: parsedUrl.pathname + parsedUrl.search,
       method: req.method,
       headers: {
-        'User-Agent': 'CORS-Proxy'
+        'User-Agent': 'CORS-Proxy',
+        'Accept': '*/*'
       }
     };
     
-    const proxy = https.request(options, (targetRes) => {
+    // Choose http or https module based on protocol
+    const protocol = parsedUrl.protocol === 'https:' ? https : http;
+    
+    const proxy = protocol.request(options, (targetRes) => {
       // Check if it's a redirect
       if (targetRes.statusCode >= 300 && targetRes.statusCode < 400 && targetRes.headers.location) {
         const redirectUrl = targetRes.headers.location;
@@ -66,14 +70,24 @@ const server = http.createServer((req, res) => {
         return;
       }
       
-      // Copy safe headers from target response, excluding CORS-related headers
+      // Copy safe headers from target response, excluding headers that might interfere
       const safeHeaders = {};
+      const headersToSkip = [
+        'access-control-allow-origin',
+        'access-control-allow-methods',
+        'access-control-allow-headers',
+        'access-control-expose-headers',
+        'access-control-allow-credentials',
+        'connection',
+        'keep-alive',
+        'transfer-encoding',
+        'content-encoding', // Will be handled by the stream
+        'content-length'    // Will be recalculated by Node.js
+      ];
+      
       for (const [key, value] of Object.entries(targetRes.headers)) {
-        // Skip headers that might interfere with CORS or cause issues
         const lowerKey = key.toLowerCase();
-        if (!['access-control-allow-origin', 'access-control-allow-methods', 
-              'access-control-allow-headers', 'access-control-expose-headers',
-              'connection', 'keep-alive', 'transfer-encoding'].includes(lowerKey)) {
+        if (!headersToSkip.includes(lowerKey)) {
           safeHeaders[key] = value;
         }
       }

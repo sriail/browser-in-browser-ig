@@ -46,8 +46,11 @@ async function fetchAndDecompress(url) {
         console.error('Error fetching/decompressing image:', error);
         
         // Provide more helpful error message for CORS issues
-        if (error.name === 'TypeError' && error.message.includes('fetch')) {
-            updateStatus('Error: CORS restriction detected. The server hosting the image file does not allow cross-origin requests. Please check server configuration or use a CORS proxy.');
+        // CORS errors typically manifest as TypeError with "Failed to fetch" message
+        if (error.name === 'TypeError' && error.message === 'Failed to fetch') {
+            updateStatus('Error: Unable to download image. This is likely a CORS (Cross-Origin Resource Sharing) issue. Please use the CORS proxy (see README for instructions) or download the image locally.');
+        } else if (error.name === 'TypeError') {
+            updateStatus('Error: Network error - ' + error.message + '. Check your internet connection or try using the CORS proxy.');
         } else {
             updateStatus('Error: ' + error.message);
         }
