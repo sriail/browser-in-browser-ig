@@ -2,11 +2,13 @@
 
 let emulator = null;
 
-// Configuration: Set to true to use local CORS proxy
-// If you're experiencing CORS issues, start the cors-proxy.js server with:
-// node cors-proxy.js
-const USE_CORS_PROXY = false;
-const CORS_PROXY_URL = 'http://localhost:8080/';
+// Configuration: CORS proxy settings
+// GitHub releases don't support CORS, so we use a public CORS proxy by default
+const USE_CORS_PROXY = true;
+const CORS_PROXY_URLS = [
+    'https://cors.sh/',           // Primary CORS proxy (cors.sh)
+    'http://localhost:8080/',     // Local CORS proxy (if running cors-proxy.js)
+];
 
 // Function to update status message
 function updateStatus(message, show = true) {
@@ -19,47 +21,78 @@ function updateStatus(message, show = true) {
 async function fetchAndDecompress(url) {
     updateStatus('Downloading image file...');
     
-    try {
-        // Fetch with explicit CORS mode to get better error messages
-        const response = await fetch(url, {
-            mode: 'cors',
-            credentials: 'omit'
-        });
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+    // List of URLs to try (with CORS proxies if enabled)
+    const urlsToTry = [];
+    
+    if (USE_CORS_PROXY) {
+        // Try each CORS proxy
+        for (const proxyUrl of CORS_PROXY_URLS) {
+            urlsToTry.push(proxyUrl + url);
         }
-        
-        updateStatus('Decompressing image file...');
-        
-        // Use the Compression Streams API to decompress the gzip file
-        const ds = new DecompressionStream("gzip");
-        const decompressedStream = response.body.pipeThrough(ds);
-        
-        // Convert the stream to an ArrayBuffer for v86
-        const decompressedResponse = new Response(decompressedStream);
-        const arrayBuffer = await decompressedResponse.arrayBuffer();
-        
-        updateStatus('Image ready, initializing emulator...');
-        return arrayBuffer;
-    } catch (error) {
-        console.error('Error fetching/decompressing image:', error);
-        
-        // Provide more helpful error message for CORS and network issues
-        // CORS errors typically manifest as TypeError with specific patterns
-        const errorMsg = error.message.toLowerCase();
-        if (error.name === 'TypeError' && 
-            (errorMsg.includes('failed to fetch') || 
-             errorMsg.includes('networkerror') || 
-             errorMsg.includes('cors'))) {
-            updateStatus('Error: Unable to download image. This is likely a CORS (Cross-Origin Resource Sharing) issue. Please use the CORS proxy (see README for instructions) or download the image locally.');
-        } else if (error.name === 'TypeError') {
-            updateStatus('Error: Network error - ' + error.message + '. Check your internet connection.');
-        } else {
-            updateStatus('Error: ' + error.message);
-        }
-        throw error;
+    } else {
+        // Try direct URL
+        urlsToTry.push(url);
     }
+    
+    let lastError = null;
+    
+    // Try each URL until one succeeds
+    for (let i = 0; i < urlsToTry.length; i++) {
+        const tryUrl = urlsToTry[i];
+        console.log(`Attempt ${i + 1}/${urlsToTry.length}: Trying URL:`, tryUrl);
+        
+        try {
+            // Fetch with explicit CORS mode to get better error messages
+            const response = await fetch(tryUrl, {
+                mode: 'cors',
+                credentials: 'omit'
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            updateStatus('Decompressing image file...');
+            
+            // Use the Compression Streams API to decompress the gzip file
+            const ds = new DecompressionStream("gzip");
+            const decompressedStream = response.body.pipeThrough(ds);
+            
+            // Convert the stream to an ArrayBuffer for v86
+            const decompressedResponse = new Response(decompressedStream);
+            const arrayBuffer = await decompressedResponse.arrayBuffer();
+            
+            updateStatus('Image ready, initializing emulator...');
+            console.log('Successfully downloaded and decompressed image from:', tryUrl);
+            return arrayBuffer;
+        } catch (error) {
+            console.warn(`Failed with URL ${tryUrl}:`, error.message);
+            lastError = error;
+            
+            // If this isn't the last URL, try the next one
+            if (i < urlsToTry.length - 1) {
+                updateStatus(`Download failed, trying alternative method (${i + 2}/${urlsToTry.length})...`);
+                continue;
+            }
+        }
+    }
+    
+    // All attempts failed
+    console.error('All download attempts failed:', lastError);
+    
+    // Provide more helpful error message for CORS and network issues
+    const errorMsg = lastError.message.toLowerCase();
+    if (lastError.name === 'TypeError' && 
+        (errorMsg.includes('failed to fetch') || 
+         errorMsg.includes('networkerror') || 
+         errorMsg.includes('cors'))) {
+        updateStatus('Error: Unable to download image. CORS issue detected. Please try running the local CORS proxy (see README) or download the image manually.');
+    } else if (lastError.name === 'TypeError') {
+        updateStatus('Error: Network error - ' + lastError.message + '. Check your internet connection.');
+    } else {
+        updateStatus('Error: ' + lastError.message);
+    }
+    throw lastError;
 }
 
 // Function to start the emulator
@@ -81,15 +114,9 @@ async function startEmulator() {
         console.log('Starting emulator with RAM:', ramMB, 'MB, VRAM:', vramMB, 'MB');
         
         // URL of the compressed image file
-        let imageUrl = 'https://github.com/sriail/file-serving/releases/download/browser-packages/alpine-midori.img.gz';
+        const imageUrl = 'https://github.com/sriail/file-serving/releases/download/browser-packages/alpine-midori.img.gz';
         
-        // If CORS proxy is enabled, prepend the proxy URL
-        if (USE_CORS_PROXY) {
-            imageUrl = CORS_PROXY_URL + imageUrl;
-            console.log('Using CORS proxy:', imageUrl);
-        }
-        
-        // Download and decompress the image
+        // Download and decompress the image (CORS proxy handled in fetchAndDecompress)
         const imgBuffer = await fetchAndDecompress(imageUrl);
         
         console.log('Image decompressed, size:', imgBuffer.byteLength, 'bytes');
