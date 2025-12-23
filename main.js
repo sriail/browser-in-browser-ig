@@ -2,6 +2,12 @@
 
 let emulator = null;
 
+// Configuration: Set to true to use local CORS proxy
+// If you're experiencing CORS issues, start the cors-proxy.js server with:
+// node cors-proxy.js
+const USE_CORS_PROXY = false;
+const CORS_PROXY_URL = 'http://localhost:8080/';
+
 // Function to update status message
 function updateStatus(message, show = true) {
     const statusDiv = document.getElementById('status');
@@ -14,7 +20,11 @@ async function fetchAndDecompress(url) {
     updateStatus('Downloading image file...');
     
     try {
-        const response = await fetch(url);
+        // Fetch with explicit CORS mode to get better error messages
+        const response = await fetch(url, {
+            mode: 'cors',
+            credentials: 'omit'
+        });
         
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
@@ -34,7 +44,20 @@ async function fetchAndDecompress(url) {
         return arrayBuffer;
     } catch (error) {
         console.error('Error fetching/decompressing image:', error);
-        updateStatus('Error: ' + error.message);
+        
+        // Provide more helpful error message for CORS and network issues
+        // CORS errors typically manifest as TypeError with specific patterns
+        const errorMsg = error.message.toLowerCase();
+        if (error.name === 'TypeError' && 
+            (errorMsg.includes('failed to fetch') || 
+             errorMsg.includes('networkerror') || 
+             errorMsg.includes('cors'))) {
+            updateStatus('Error: Unable to download image. This is likely a CORS (Cross-Origin Resource Sharing) issue. Please use the CORS proxy (see README for instructions) or download the image locally.');
+        } else if (error.name === 'TypeError') {
+            updateStatus('Error: Network error - ' + error.message + '. Check your internet connection.');
+        } else {
+            updateStatus('Error: ' + error.message);
+        }
         throw error;
     }
 }
@@ -58,7 +81,13 @@ async function startEmulator() {
         console.log('Starting emulator with RAM:', ramMB, 'MB, VRAM:', vramMB, 'MB');
         
         // URL of the compressed image file
-        const imageUrl = 'https://github.com/sriail/file-serving/releases/download/browser-packages/alpine-midori.img.gz';
+        let imageUrl = 'https://github.com/sriail/file-serving/releases/download/browser-packages/alpine-midori.img.gz';
+        
+        // If CORS proxy is enabled, prepend the proxy URL
+        if (USE_CORS_PROXY) {
+            imageUrl = CORS_PROXY_URL + imageUrl;
+            console.log('Using CORS proxy:', imageUrl);
+        }
         
         // Download and decompress the image
         const imgBuffer = await fetchAndDecompress(imageUrl);
