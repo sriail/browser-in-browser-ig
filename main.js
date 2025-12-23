@@ -14,7 +14,11 @@ async function fetchAndDecompress(url) {
     updateStatus('Downloading image file...');
     
     try {
-        const response = await fetch(url);
+        // Fetch with explicit CORS mode to get better error messages
+        const response = await fetch(url, {
+            mode: 'cors',
+            credentials: 'omit'
+        });
         
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
@@ -34,7 +38,13 @@ async function fetchAndDecompress(url) {
         return arrayBuffer;
     } catch (error) {
         console.error('Error fetching/decompressing image:', error);
-        updateStatus('Error: ' + error.message);
+        
+        // Provide more helpful error message for CORS issues
+        if (error.name === 'TypeError' && error.message.includes('fetch')) {
+            updateStatus('Error: CORS restriction detected. The server hosting the image file does not allow cross-origin requests. Please check server configuration or use a CORS proxy.');
+        } else {
+            updateStatus('Error: ' + error.message);
+        }
         throw error;
     }
 }
