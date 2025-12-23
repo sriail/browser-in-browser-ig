@@ -91,6 +91,10 @@ The download process will:
 
 All of this happens automatically in the browser - no server setup required!
 
+### Testing CORS Proxies
+
+If you want to verify that the CORS proxies are working correctly, open `test-cors-proxy.html` in your browser. This test page will check each proxy and report which ones are accessible.
+
 ### Alternative: Download the Image Locally
 
 If you prefer not to use any proxy service, you can download the image file manually:
