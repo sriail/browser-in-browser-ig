@@ -82,15 +82,22 @@ Navigate to `http://localhost:8000` in your web browser.
 - Ensure your browser supports the DecompressionStream API (modern browsers)
 - The emulator requires WebAssembly support
 
-## Troubleshooting CORS Issues
+## CORS Handling
 
-**Important:** GitHub releases do not send CORS headers (`Access-Control-Allow-Origin`), which prevents browsers from downloading files directly from cross-origin requests. This is a security feature of browsers.
+**Good News:** CORS issues are now handled automatically! The emulator uses a public CORS proxy service by default, so you don't need to do anything special.
 
-If you encounter CORS (Cross-Origin Resource Sharing) errors when downloading the OS image, use one of these solutions:
+### How It Works
 
-### Solution 1: Use the Built-in CORS Proxy (Recommended for Development)
+GitHub releases do not send CORS headers (`Access-Control-Allow-Origin`), which would normally prevent browsers from downloading files directly. The emulator now automatically uses a public CORS proxy service (cors.sh) to work around this limitation.
 
-This repository includes a simple CORS proxy server that you can run locally:
+The download process will:
+1. Try the primary CORS proxy (cors.sh)
+2. If that fails, try the local CORS proxy (if you're running cors-proxy.js)
+3. Provide clear error messages if all methods fail
+
+### Optional: Running a Local CORS Proxy
+
+If you prefer to use a local CORS proxy for better privacy or reliability:
 
 1. **Start the CORS proxy server** (in a separate terminal):
    ```bash
@@ -98,36 +105,18 @@ This repository includes a simple CORS proxy server that you can run locally:
    ```
    This will start a proxy server on `http://localhost:8080`
 
-2. **Enable the proxy in main.js**:
-   Open `main.js` and change:
-   ```javascript
-   const USE_CORS_PROXY = false;
-   ```
-   to:
-   ```javascript
-   const USE_CORS_PROXY = true;
-   ```
-
-3. **Start the web server** (in another terminal):
+2. **Start the web server** (in another terminal):
    ```bash
    npx http-server -p 8000 --cors
    ```
 
-4. **Open in browser**: Navigate to `http://localhost:8000`
+3. **Open in browser**: Navigate to `http://localhost:8000`
 
-### Solution 2: Use http-server with CORS enabled
+The emulator will automatically detect and use your local CORS proxy as a fallback if the public proxy fails.
 
-The simplest solution is to use `http-server` with CORS enabled:
+### Alternative: Download the Image Locally
 
-```bash
-npx http-server -p 8000 --cors
-```
-
-Note: This enables CORS for your local server but doesn't solve the GitHub releases CORS issue. You still need the CORS proxy.
-
-### Solution 3: Download the Image Locally
-
-Download the image file manually and serve it locally:
+If you prefer not to use any proxy service, you can download the image file manually:
 
 1. **Download the image**:
    ```bash
@@ -140,27 +129,23 @@ Download the image file manually and serve it locally:
    ```javascript
    const imageUrl = 'images/alpine-midori.img.gz';
    ```
+   And disable the CORS proxy:
+   ```javascript
+   const USE_CORS_PROXY = false;
+   ```
 
 3. **Start the server**:
    ```bash
    npx http-server -p 8000 --cors
    ```
 
-### Solution 4: Use a Public CORS Proxy (Not Recommended for Production)
-
-Modify `main.js` to use a public CORS proxy service:
-```javascript
-const imageUrl = 'https://cors-anywhere.herokuapp.com/https://github.com/sriail/file-serving/releases/download/browser-packages/alpine-midori.img.gz';
-```
-
-**Warning**: Public CORS proxies have rate limits and are not reliable for production use.
-
-### Why Does This Happen?
+### Why Does CORS Matter?
 
 - GitHub releases (`github.com`) don't include `Access-Control-Allow-Origin` headers in their responses
 - Browsers block cross-origin requests that lack proper CORS headers for security reasons
 - The error appears as `ERR_BLOCKED_BY_CLIENT` or `Failed to fetch` in the console
 - This affects all browsers (Chrome, Firefox, Safari, Edge) due to the Same-Origin Policy
+- The CORS proxy solves this by adding the necessary headers
 
 ## License
 
