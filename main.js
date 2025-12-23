@@ -24,17 +24,27 @@ function updateStatus(message, show = true) {
 async function fetchAndDecompress(url) {
     updateStatus('Downloading image file...');
     
-    // Validate URL for security (must be HTTPS from expected domain)
-    if (!url.startsWith('https://github.com/sriail/file-serving/')) {
+    // Validate URL for security (must be HTTPS from expected domain, or a local path)
+    const isLocalPath = !url.startsWith('http://') && !url.startsWith('https://');
+    const isValidRemote = url.startsWith('https://github.com/sriail/file-serving/');
+    
+    if (!isLocalPath && !isValidRemote) {
         throw new Error('Invalid or unauthorized image URL');
     }
     
     // List of URLs to try with CORS proxies
     const urlsToTry = [];
     
-    // Try each CORS proxy
-    for (const proxyUrl of CORS_PROXY_URLS) {
-        urlsToTry.push(proxyUrl + encodeURIComponent(url));
+    // Try each CORS proxy (only for remote URLs)
+    if (!isLocalPath && CORS_PROXY_URLS.length > 0) {
+        for (const proxyUrl of CORS_PROXY_URLS) {
+            urlsToTry.push(proxyUrl + encodeURIComponent(url));
+        }
+    }
+    
+    // If no CORS proxies are configured or it's a local path, try the direct URL
+    if (urlsToTry.length === 0) {
+        urlsToTry.push(url);
     }
     
     let lastError = null;

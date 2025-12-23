@@ -86,7 +86,7 @@ GitHub releases do not send CORS headers (`Access-Control-Allow-Origin`), which 
 
 The download process will:
 1. Try the primary CORS proxy (corsproxy.io)
-2. If that fails, try alternative proxies (allorigins.win, cors-anywhere)
+2. If that fails, try the fallback proxy (api.allorigins.win)
 3. Provide clear error messages if all proxies fail
 
 All of this happens automatically in the browser - no server setup required!
