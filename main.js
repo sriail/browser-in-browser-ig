@@ -82,7 +82,7 @@ async function startEmulator() {
         });
         
         emulator.add_listener("download-progress", function(e) {
-            if (e.file_name && e.file_name.includes('alpine-midori.img')) {
+            if (e.file_name && e.file_name.includes(IMAGE_URL)) {
                 const percent = e.lengthComputable && e.total ? 
                     Math.round((e.loaded / e.total) * 100) : 0;
                 if (percent > 0) {
@@ -95,7 +95,7 @@ async function startEmulator() {
         
         emulator.add_listener("download-error", function(e) {
             console.error("Download error:", e);
-            if (e.file_name && e.file_name.includes('alpine-midori.img')) {
+            if (e.file_name && e.file_name.includes(IMAGE_URL)) {
                 updateStatus('Error: Failed to load disk image. Make sure alpine-midori.img is in the images/ folder and you are running a local web server.');
                 startButton.disabled = false;
                 startButton.textContent = 'Start';
