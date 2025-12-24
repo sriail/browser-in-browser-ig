@@ -91,6 +91,7 @@ async function startEmulator() {
         
         // Initialize v86 emulator with the decompressed image buffer
         emulator = new V86({
+            wasm_path: "v86.wasm",
             screen_container: document.getElementById("screen_container"),
             bios: {
                 url: "bios/seabios.bin",
