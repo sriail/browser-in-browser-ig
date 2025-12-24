@@ -1,4 +1,4 @@
-# Browser in Browser - v86 Emulator
+# Browser in Browser - v86 based Emulator
 
 A simple web-based x86 emulator using v86 that loads and runs Alpine Linux with Midori browser.
 
