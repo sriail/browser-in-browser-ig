@@ -5,11 +5,12 @@ let emulator = null;
 // Configuration: Image source and CORS proxy settings
 const IMAGE_URL = 'https://github.com/sriail/file-serving/releases/download/browser-packages/alpine-midori.img.gz';
 
-// GitHub releases don't support CORS, so we use a public CORS proxy by default
-const USE_CORS_PROXY = true;
+// GitHub releases don't support CORS, so we use multiple reliable public CORS proxies
+// These are free, public services that add CORS headers to any URL
 const CORS_PROXY_URLS = [
-    'https://cors.sh/',           // Primary CORS proxy (cors.sh)
-    'http://localhost:8080/',     // Local CORS proxy (if running cors-proxy.js)
+    'https://corsproxy.io/?',                    // corsproxy.io - reliable and fast
+    'https://api.allorigins.win/raw?url=',       // allorigins.win - good fallback
+    // Note: cors-anywhere may have rate limits on public deployments
 ];
 
 // Function to update status message
@@ -23,16 +24,45 @@ function updateStatus(message, show = true) {
 async function fetchAndDecompress(url) {
     updateStatus('Downloading image file...');
     
-    // List of URLs to try (with CORS proxies if enabled)
+    // Validate URL for security
+    let isLocalPath = false;
+    let isValidRemote = false;
+    
+    // First check if it looks like a local path (no protocol)
+    if (!url.includes('://')) {
+        isLocalPath = true;
+    } else {
+        // It has a protocol, so validate as remote URL
+        try {
+            const parsedUrl = new URL(url);
+            
+            // Check if it's a valid remote URL - must be HTTPS from specific GitHub path
+            if (parsedUrl.protocol === 'https:' &&
+                parsedUrl.hostname === 'github.com' && 
+                parsedUrl.pathname.startsWith('/sriail/file-serving/releases/download/')) {
+                isValidRemote = true;
+            }
+        } catch (e) {
+            // Invalid URL - will be rejected
+        }
+    }
+    
+    if (!isLocalPath && !isValidRemote) {
+        throw new Error('Invalid or unauthorized image URL');
+    }
+    
+    // List of URLs to try with CORS proxies
     const urlsToTry = [];
     
-    if (USE_CORS_PROXY) {
-        // Try each CORS proxy
+    // Try each CORS proxy (only for remote URLs)
+    if (!isLocalPath && CORS_PROXY_URLS.length > 0) {
         for (const proxyUrl of CORS_PROXY_URLS) {
-            urlsToTry.push(proxyUrl + url);
+            urlsToTry.push(proxyUrl + encodeURIComponent(url));
         }
-    } else {
-        // Try direct URL
+    }
+    
+    // If no CORS proxies are configured or it's a local path, try the direct URL
+    if (urlsToTry.length === 0) {
         urlsToTry.push(url);
     }
     
@@ -47,7 +77,10 @@ async function fetchAndDecompress(url) {
             // Fetch with explicit CORS mode to get better error messages
             const response = await fetch(tryUrl, {
                 mode: 'cors',
-                credentials: 'omit'
+                credentials: 'omit',
+                headers: {
+                    'Accept': 'application/gzip, application/octet-stream'
+                }
             });
             
             if (!response.ok) {
@@ -73,7 +106,7 @@ async function fetchAndDecompress(url) {
             
             // If this isn't the last URL, try the next one
             if (i < urlsToTry.length - 1) {
-                updateStatus(`Download failed, trying alternative method (${i + 2}/${urlsToTry.length})...`);
+                updateStatus(`Download failed, trying alternative proxy (${i + 2}/${urlsToTry.length})...`);
                 continue;
             }
         }
@@ -88,7 +121,7 @@ async function fetchAndDecompress(url) {
         (errorMsg.includes('failed to fetch') || 
          errorMsg.includes('networkerror') || 
          errorMsg.includes('cors'))) {
-        updateStatus('Error: Unable to download image. CORS issue detected. Please try running the local CORS proxy (see README) or download the image manually.');
+        updateStatus('Error: Unable to download image. All CORS proxies failed. Please check your internet connection or try again later.');
     } else if (lastError.name === 'TypeError') {
         updateStatus('Error: Network error - ' + lastError.message + '. Check your internet connection.');
     } else {

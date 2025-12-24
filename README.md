@@ -17,16 +17,16 @@ A simple web-based x86 emulator using v86 that loads and runs Alpine Linux with 
 
 ### 1. Run a Local Web Server
 
-Due to browser security restrictions with WebAssembly and CORS, you need to serve the files through a web server:
+Due to browser security restrictions with WebAssembly, you need to serve the files through a web server:
 
 Using Python 3:
 ```bash
 python3 -m http.server 8000
 ```
 
-Using Node.js (with `http-server` and CORS enabled):
+Using Node.js (with `http-server`):
 ```bash
-npx http-server -p 8000 --cors
+npx http-server -p 8000
 ```
 
 Using PHP:
@@ -34,13 +34,7 @@ Using PHP:
 php -S localhost:8000
 ```
 
-**Important:** If you encounter CORS errors when downloading the OS image, ensure your web server has CORS enabled. The repository includes configuration files for various server types:
-- `.htaccess` - For Apache servers
-- `vercel.json` - For Vercel deployments
-- `_headers` - For Netlify deployments
-- `http-server.config.json` - For http-server (Node.js)
-
-For `http-server`, use the `--cors` flag as shown above to enable CORS support.
+**Note:** You don't need to enable CORS on your local server. The emulator handles CORS automatically using public proxy services when downloading the OS image from GitHub.
 
 ### 2. Open in Browser
 
@@ -84,35 +78,22 @@ Navigate to `http://localhost:8000` in your web browser.
 
 ## CORS Handling
 
-**Good News:** CORS issues are now handled automatically! The emulator uses a public CORS proxy service by default, so you don't need to do anything special.
+**Good News:** CORS issues are now handled automatically using reliable public CORS proxy services! You don't need to run any separate server.
 
 ### How It Works
 
-GitHub releases do not send CORS headers (`Access-Control-Allow-Origin`), which would normally prevent browsers from downloading files directly. The emulator now automatically uses a public CORS proxy service (cors.sh) to work around this limitation.
+GitHub releases do not send CORS headers (`Access-Control-Allow-Origin`), which prevents browsers from downloading files directly due to browser security policies. The emulator automatically handles this by using multiple reliable public CORS proxy services.
 
 The download process will:
-1. Try the primary CORS proxy (cors.sh)
-2. If that fails, try the local CORS proxy (if you're running cors-proxy.js)
-3. Provide clear error messages if all methods fail
+1. Try the primary CORS proxy (corsproxy.io)
+2. If that fails, try the fallback proxy (api.allorigins.win)
+3. Provide clear error messages if all proxies fail
 
-### Optional: Running a Local CORS Proxy
+All of this happens automatically in the browser - no server setup required!
 
-If you prefer to use a local CORS proxy for better privacy or reliability:
+### Testing CORS Proxies
 
-1. **Start the CORS proxy server** (in a separate terminal):
-   ```bash
-   node cors-proxy.js
-   ```
-   This will start a proxy server on `http://localhost:8080`
-
-2. **Start the web server** (in another terminal):
-   ```bash
-   npx http-server -p 8000 --cors
-   ```
-
-3. **Open in browser**: Navigate to `http://localhost:8000`
-
-The emulator will automatically detect and use your local CORS proxy as a fallback if the public proxy fails.
+If you want to verify that the CORS proxies are working correctly, open `test-cors-proxy.html` in your browser. This test page will check each proxy and report which ones are accessible.
 
 ### Alternative: Download the Image Locally
 
@@ -125,13 +106,13 @@ If you prefer not to use any proxy service, you can download the image file manu
    ```
 
 2. **Update main.js**:
-   Change the image URL to:
+   Change the image URL at the top of the file to:
    ```javascript
-   const imageUrl = 'images/alpine-midori.img.gz';
+   const IMAGE_URL = 'images/alpine-midori.img.gz';
    ```
-   And disable the CORS proxy:
+   And update the CORS proxy URLs to an empty array:
    ```javascript
-   const USE_CORS_PROXY = false;
+   const CORS_PROXY_URLS = [];
    ```
 
 3. **Start the server**:
@@ -145,7 +126,7 @@ If you prefer not to use any proxy service, you can download the image file manu
 - Browsers block cross-origin requests that lack proper CORS headers for security reasons
 - The error appears as `ERR_BLOCKED_BY_CLIENT` or `Failed to fetch` in the console
 - This affects all browsers (Chrome, Firefox, Safari, Edge) due to the Same-Origin Policy
-- The CORS proxy solves this by adding the necessary headers
+- Public CORS proxy services solve this by adding the necessary headers
 
 ## License
 

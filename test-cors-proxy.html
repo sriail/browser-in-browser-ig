@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CORS Proxy Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            max-width: 800px;
+        }
+        .test-result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .info {
+            background-color: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        pre {
+            background-color: #f4f4f4;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>CORS Proxy System Test</h1>
+    <p>This page tests the CORS proxy configuration to ensure it works correctly.</p>
+    
+    <button onclick="testCorsProxies()">Test CORS Proxies</button>
+    
+    <div id="results"></div>
+    
+    <script>
+        // Same configuration as main.js
+        const CORS_PROXY_URLS = [
+            'https://corsproxy.io/?',
+            'https://api.allorigins.win/raw?url=',
+        ];
+        
+        const TEST_URL = 'https://github.com/sriail/file-serving/releases/download/browser-packages/alpine-midori.img.gz';
+        
+        function addResult(message, type) {
+            const resultsDiv = document.getElementById('results');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `test-result ${type}`;
+            resultDiv.textContent = message;
+            resultsDiv.appendChild(resultDiv);
+        }
+        
+        async function testCorsProxies() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '';
+            
+            addResult('Starting CORS proxy tests...', 'info');
+            
+            for (let i = 0; i < CORS_PROXY_URLS.length; i++) {
+                const proxyUrl = CORS_PROXY_URLS[i];
+                const fullUrl = proxyUrl + encodeURIComponent(TEST_URL);
+                
+                addResult(`Testing proxy ${i + 1}/${CORS_PROXY_URLS.length}: ${proxyUrl}`, 'info');
+                
+                try {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+                    
+                    try {
+                        const response = await fetch(fullUrl, {
+                            method: 'HEAD', // Use HEAD to avoid downloading the entire file
+                            mode: 'cors',
+                            credentials: 'omit',
+                            signal: controller.signal
+                        });
+                        
+                        if (response.ok) {
+                            addResult(`✓ Success! Proxy ${i + 1} is working (Status: ${response.status})`, 'success');
+                        } else {
+                            addResult(`✗ Proxy ${i + 1} failed with status: ${response.status}`, 'error');
+                        }
+                    } finally {
+                        clearTimeout(timeoutId);
+                    }
+                } catch (error) {
+                    addResult(`✗ Proxy ${i + 1} failed: ${error.message}`, 'error');
+                }
+            }
+            
+            addResult('Test complete! Check results above.', 'info');
+        }
+    </script>
+</body>
+</html>
