@@ -82,8 +82,8 @@ async function startEmulator() {
         });
         
         emulator.add_listener("download-progress", function(e) {
-            if (e.file_name && e.file_name.includes(IMAGE_URL)) {
-                const percent = e.lengthComputable && e.total ? 
+            if (e.file_name && e.file_name === IMAGE_URL) {
+                const percent = e.lengthComputable && e.total && e.total > 0 ? 
                     Math.round((e.loaded / e.total) * 100) : 0;
                 if (percent > 0) {
                     updateStatus(`Loading disk image: ${percent}% (${Math.round(e.loaded / BYTES_PER_MB)} MB / ${Math.round(e.total / BYTES_PER_MB)} MB)`);
@@ -95,7 +95,7 @@ async function startEmulator() {
         
         emulator.add_listener("download-error", function(e) {
             console.error("Download error:", e);
-            if (e.file_name && e.file_name.includes(IMAGE_URL)) {
+            if (e.file_name && e.file_name === IMAGE_URL) {
                 updateStatus('Error: Failed to load disk image. Make sure alpine-midori.img is in the images/ folder and you are running a local web server.');
                 startButton.disabled = false;
                 startButton.textContent = 'Start';
