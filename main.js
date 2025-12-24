@@ -98,8 +98,7 @@ async function fetchAndDecompress(url) {
                     mode: 'cors',
                     credentials: 'omit',
                     headers: {
-                        'Accept': 'application/gzip, application/octet-stream',
-                        'Range': 'bytes=0-' // Support range requests for better streaming
+                        'Accept': 'application/gzip, application/octet-stream'
                     },
                     signal: controller.signal
                 });
@@ -178,8 +177,16 @@ async function fetchAndDecompress(url) {
             
             // If this isn't the last URL, try the next one
             if (i < urlsToTry.length - 1) {
-                const nextAttempt = i === 0 && !isLocalPath ? 'CORS proxy' : 'alternative proxy';
-                updateStatus(`Download failed, trying ${nextAttempt} (${i + 2}/${urlsToTry.length})...`);
+                // Determine what we're trying next based on current position
+                let nextAttemptType;
+                if (i === 0 && !isLocalPath) {
+                    // We just failed direct download, trying first CORS proxy
+                    nextAttemptType = 'CORS proxy';
+                } else {
+                    // We failed a CORS proxy, trying another one
+                    nextAttemptType = 'alternative proxy';
+                }
+                updateStatus(`Download failed, trying ${nextAttemptType} (${i + 2}/${urlsToTry.length})...`);
                 continue;
             }
         }
