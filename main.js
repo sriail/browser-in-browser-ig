@@ -3,8 +3,8 @@
 let emulator = null;
 
 // Configuration: Local image path
-// Place your alpine-midori.img.gz file in the images/ folder
-const IMAGE_URL = 'images/alpine-midori.img.gz';
+// Place your alpine-midori.img file in the images/ folder
+const IMAGE_URL = 'images/alpine-midori.img';
 
 // Constants for better readability
 const BYTES_PER_MB = 1024 * 1024;
@@ -16,8 +16,8 @@ function updateStatus(message, show = true) {
     statusDiv.style.display = show ? 'block' : 'none';
 }
 
-// Function to fetch and decompress the .img.gz file from local storage
-async function fetchAndDecompress(url) {
+// Function to fetch the .img file from local storage
+async function fetchImage(url) {
     updateStatus('Loading image file...');
     
     console.log('Loading image from:', url);
@@ -27,67 +27,31 @@ async function fetchAndDecompress(url) {
         const response = await fetch(url);
         
         if (!response.ok) {
-            throw new Error(`Failed to load image file. Status: ${response.status}. Make sure you have placed alpine-midori.img.gz in the images/ folder.`);
+            throw new Error(`Failed to load image file. Status: ${response.status}. Make sure you have placed alpine-midori.img in the images/ folder.`);
         }
         
         // Get content length for progress tracking
         const contentLength = response.headers.get('content-length');
         const totalBytes = contentLength ? parseInt(contentLength, 10) : 0;
         
-        updateStatus('Decompressing image file...');
-        console.log('Starting decompression, compressed size:', totalBytes, 'bytes');
+        updateStatus('Reading image file...');
+        console.log('Loading image, size:', totalBytes, 'bytes');
         
-        // Use the Compression Streams API to decompress the gzip file
-        const ds = new DecompressionStream("gzip");
-        const decompressedStream = response.body.pipeThrough(ds);
-        
-        // Read the decompressed stream in chunks for better memory management
-        const reader = decompressedStream.getReader();
-        const chunks = [];
-        let receivedBytes = 0;
-        let lastReportedMB = 0;
-        
-        while (true) {
-            const { done, value } = await reader.read();
-            
-            if (done) {
-                break;
-            }
-            
-            chunks.push(value);
-            receivedBytes += value.length;
-            
-            // Update status every MB for better feedback
-            const currentMB = Math.floor(receivedBytes / BYTES_PER_MB);
-            if (currentMB > lastReportedMB) {
-                updateStatus(`Decompressing... ${currentMB} MB decompressed`);
-                lastReportedMB = currentMB;
-            }
-        }
-        
-        // Combine all chunks into a single ArrayBuffer
-        const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
-        const arrayBuffer = new ArrayBuffer(totalLength);
-        const uint8View = new Uint8Array(arrayBuffer);
-        
-        let offset = 0;
-        for (const chunk of chunks) {
-            uint8View.set(chunk, offset);
-            offset += chunk.length;
-        }
+        // Read the response as an ArrayBuffer
+        const arrayBuffer = await response.arrayBuffer();
         
         updateStatus('Image ready, initializing emulator...');
-        console.log('Successfully loaded and decompressed image');
-        console.log('Decompressed size:', totalLength, 'bytes');
+        console.log('Successfully loaded image');
+        console.log('Image size:', arrayBuffer.byteLength, 'bytes');
         return arrayBuffer;
     } catch (error) {
         console.error('Failed to load image:', error);
         
         // Provide helpful error message
         if (error.message.includes('Status: 404')) {
-            updateStatus('Error: Image file not found. Please download alpine-midori.img.gz and place it in the images/ folder. See images/README.md for instructions.');
+            updateStatus('Error: Image file not found. Please download alpine-midori.img and place it in the images/ folder. See images/README.md for instructions.');
         } else if (error.name === 'TypeError' && error.message.toLowerCase().includes('failed to fetch')) {
-            updateStatus('Error: Failed to load image file. Make sure alpine-midori.img.gz is in the images/ folder and you are running a local web server.');
+            updateStatus('Error: Failed to load image file. Make sure alpine-midori.img is in the images/ folder and you are running a local web server.');
         } else {
             updateStatus('Error: ' + error.message);
         }
@@ -113,10 +77,10 @@ async function startEmulator() {
     try {
         console.log('Starting emulator with RAM:', ramMB, 'MB, VRAM:', vramMB, 'MB');
         
-        // Download and decompress the image (CORS proxy handled in fetchAndDecompress)
-        const imgBuffer = await fetchAndDecompress(IMAGE_URL);
+        // Load the image file
+        const imgBuffer = await fetchImage(IMAGE_URL);
         
-        console.log('Image decompressed, size:', imgBuffer.byteLength, 'bytes');
+        console.log('Image loaded, size:', imgBuffer.byteLength, 'bytes');
         console.log('Image buffer type:', imgBuffer.constructor.name);
         console.log('Initializing V86 with', ramMB, 'MB RAM and', vramMB, 'MB VRAM');
         
@@ -163,14 +127,6 @@ async function startEmulator() {
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
     const startButton = document.getElementById('startButton');
-    
-    // Check for DecompressionStream support
-    if (typeof DecompressionStream === 'undefined') {
-        updateStatus('Error: Your browser does not support DecompressionStream API. Please use a modern browser (Chrome 80+, Edge 80+, Safari 16.4+, Firefox 113+).');
-        startButton.disabled = true;
-        console.error('DecompressionStream API not supported');
-        return;
-    }
     
     startButton.addEventListener('click', startEmulator);
     
