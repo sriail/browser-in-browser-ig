@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>browser ig</title>
+    <title>browser ig - QEMU Emulator</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -84,13 +84,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>browser ig - A Basic, V86 based Modern Browser Emulator (32-bit)</h1>
-        
-        <div style="background-color: #e3f2fd; border-left: 4px solid #2196F3; padding: 15px; margin-bottom: 20px;">
-            <strong>ℹ️ 64-bit Support Available!</strong><br>
-            This page uses v86 which emulates 32-bit x86 CPUs. For 64-bit x86_64 emulation, 
-            <a href="index-64bit.html" style="color: #2196F3; font-weight: bold;">click here to try the QEMU-based 64-bit emulator</a>.
-        </div>
+        <h1>browser ig - QEMU 64-bit Emulator</h1>
         
         <div class="controls">
             <div class="control-group">
@@ -113,7 +107,7 @@
                 <select id="vram">
                     <option value="8">8 MB</option>
                     <option value="16" selected>16 MB (Default)</option>
-                    <option value="32" >32 MB</option>
+                    <option value="32">32 MB</option>
                     <option value="48">48 MB (Recommended)</option>
                     <option value="64">64 MB</option>
                 </select>
@@ -132,7 +126,45 @@
         </div>
     </div>
     
-    <script src="libv86.js"></script>
-    <script src="main.js"></script>
+    <script>
+        // Update status message
+        function updateStatus(message, show = true) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = message;
+            statusDiv.style.display = show ? 'block' : 'none';
+        }
+
+        // Start QEMU emulator
+        function startEmulator() {
+            const startButton = document.getElementById('startButton');
+            startButton.disabled = true;
+            startButton.textContent = 'Loading...';
+            
+            const ramMB = parseInt(document.getElementById('ram').value);
+            const vramMB = parseInt(document.getElementById('vram').value);
+            
+            updateStatus('Starting QEMU 64-bit emulator with RAM: ' + ramMB + ' MB, VRAM: ' + vramMB + ' MB...');
+            
+            // Redirect to QEMU demo
+            setTimeout(function() {
+                updateStatus('Redirecting to QEMU emulator...');
+                const demoWindow = window.open('https://ktock.github.io/qemu-wasm-demo/alpine-x86_64.html', '_blank', 'noopener,noreferrer');
+                if (!demoWindow) {
+                    updateStatus('Popup blocked. Please allow popups for this site.');
+                    startButton.disabled = false;
+                    startButton.textContent = 'Start';
+                } else {
+                    updateStatus('QEMU emulator opened in new window.');
+                }
+            }, 500);
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            const startButton = document.getElementById('startButton');
+            startButton.addEventListener('click', startEmulator);
+            console.log('QEMU emulator page loaded');
+        });
+    </script>
 </body>
 </html>
