@@ -80,9 +80,11 @@ async function fetchAndDecompress(url) {
         try {
             // Create an AbortController for timeout handling
             const controller = new AbortController();
+            let timeoutOccurred = false;
             const timeoutId = setTimeout(() => {
+                timeoutOccurred = true;
                 controller.abort();
-                console.warn('Request timeout - aborting fetch');
+                console.warn('Request timeout - aborting fetch after', DOWNLOAD_TIMEOUT_MS / 1000, 'seconds');
             }, DOWNLOAD_TIMEOUT_MS);
             
             try {
@@ -117,6 +119,7 @@ async function fetchAndDecompress(url) {
                 const reader = decompressedStream.getReader();
                 const chunks = [];
                 let receivedBytes = 0;
+                let lastReportedMB = 0;
                 
                 while (true) {
                     const { done, value } = await reader.read();
@@ -129,8 +132,10 @@ async function fetchAndDecompress(url) {
                     receivedBytes += value.length;
                     
                     // Update status every MB for better feedback
-                    if (receivedBytes % BYTES_PER_MB < value.length) {
-                        updateStatus(`Decompressing... ${Math.floor(receivedBytes / BYTES_PER_MB)} MB decompressed`);
+                    const currentMB = Math.floor(receivedBytes / BYTES_PER_MB);
+                    if (currentMB > lastReportedMB) {
+                        updateStatus(`Decompressing... ${currentMB} MB decompressed`);
+                        lastReportedMB = currentMB;
                     }
                 }
                 
@@ -156,10 +161,13 @@ async function fetchAndDecompress(url) {
             console.warn(`Failed with URL ${tryUrl}:`, error.message);
             lastError = error;
             
-            // Check if error is due to abort
+            // Check if error is due to abort and enhance the message
             if (error.name === 'AbortError') {
                 console.error('Download was aborted due to timeout or manual cancellation');
-                lastError = new Error('Download timeout - the file is too large or connection is too slow. Please try again or use a faster connection.');
+                // Enhance error message but preserve the AbortError type
+                error.message = timeoutOccurred 
+                    ? 'Download timeout - the file is too large or connection is too slow. Please try again or use a faster connection.'
+                    : 'Download was aborted - ' + error.message;
             }
             
             // If this isn't the last URL, try the next one
@@ -175,7 +183,7 @@ async function fetchAndDecompress(url) {
     
     // Provide more helpful error message for CORS and network issues
     const errorMsg = lastError.message.toLowerCase();
-    if (lastError.name === 'AbortError' || errorMsg.includes('abort')) {
+    if (lastError.name === 'AbortError') {
         updateStatus('Error: Download was aborted. ' + lastError.message);
     } else if (lastError.name === 'TypeError' && 
         (errorMsg.includes('failed to fetch') || 
