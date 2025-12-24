@@ -5,7 +5,7 @@ A simple web-based x86 emulator using v86 that loads and runs Alpine Linux with 
 ## Features
 
 - Browser-based x86 emulation using v86
-- Local loading and decompression of gzipped OS images
+- Local loading of OS images
 - Configurable RAM (256MB - 8GB)
 - Configurable VRAM (8MB - 64MB)
 - Simple, user-friendly interface
@@ -22,12 +22,13 @@ The emulator requires an OS image file that is not included in the repository du
 ```bash
 cd images
 curl -L -o alpine-midori.img.gz https://github.com/sriail/file-serving/releases/download/browser-packages/alpine-midori.img.gz
+gunzip alpine-midori.img.gz
 ```
 
-Or download it manually from:
+Or download and extract it manually from:
 https://github.com/sriail/file-serving/releases/download/browser-packages/alpine-midori.img.gz
 
-**Important:** Place the downloaded `alpine-midori.img.gz` file in the `images/` folder.
+**Important:** Place the extracted `alpine-midori.img` file in the `images/` folder.
 
 ### 2. Run a Local Web Server
 
@@ -54,19 +55,18 @@ Navigate to `http://localhost:8000` in your web browser.
 
 ## Usage
 
-1. Ensure `alpine-midori.img.gz` is in the `images/` folder
+1. Ensure `alpine-midori.img` is in the `images/` folder
 2. Select desired RAM amount (default: 816MB)
 3. Select desired VRAM amount (default: 16MB)
 4. Click "Start" button
-5. Wait for the image to load and decompress
+5. Wait for the image to load
 6. The Alpine Linux system will boot automatically
 
 ## Technical Details
 
 - **OS Image**: Alpine Linux with Midori browser
-- **Image Location**: `images/alpine-midori.img.gz` (downloaded separately)
+- **Image Location**: `images/alpine-midori.img` (downloaded and extracted separately)
 - **Emulator**: v86 (x86 emulator in JavaScript/WebAssembly)
-- **Decompression**: Uses browser's native DecompressionStream API
 
 ## File Structure
 
@@ -81,21 +81,20 @@ Navigate to `http://localhost:8000` in your web browser.
 │   └── vgabios.bin   # VGA BIOS file (included)
 └── images/           # Place your OS image here
     ├── README.md     # Instructions for downloading images
-    └── alpine-midori.img.gz  # OS image (download separately)
+    └── alpine-midori.img  # OS image (download and extract separately)
 ```
 
 ## Notes
 
 - The OS image file is loaded locally from the `images/` folder
-- Large images may take time to decompress (the Alpine image is ~400MB compressed, ~1GB uncompressed)
-- Ensure your browser supports the DecompressionStream API (Chrome 80+, Edge 80+, Safari 16.4+, Firefox 113+)
+- Large images may take time to load (the Alpine image is ~1GB uncompressed)
 - The emulator requires WebAssembly support
 
 ## Troubleshooting
 
 **Error: "Image file not found"**
-- Make sure you have downloaded `alpine-midori.img.gz` and placed it in the `images/` folder
-- Check that the filename is exactly `alpine-midori.img.gz`
+- Make sure you have downloaded and extracted `alpine-midori.img` and placed it in the `images/` folder
+- Check that the filename is exactly `alpine-midori.img`
 
 **Error: "Failed to load image file"**
 - Ensure you are running a local web server (not opening the HTML file directly)
