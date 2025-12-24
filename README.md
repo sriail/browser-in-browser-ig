@@ -78,26 +78,41 @@ Navigate to `http://localhost:8000` in your web browser.
 
 ## CORS Handling
 
-**Good News:** CORS issues are now handled automatically using reliable public CORS proxy services! You don't need to run any separate server.
+**Improved Download Strategy:** The emulator now attempts to download .img.gz files directly first, then falls back to CORS proxy services if needed!
 
 ### How It Works
 
-GitHub releases do not send CORS headers (`Access-Control-Allow-Origin`), which prevents browsers from downloading files directly due to browser security policies. The emulator automatically handles this by using multiple reliable public CORS proxy services.
+The download process uses a smart fallback strategy:
+1. Try downloading directly from the source (with proper CORS headers)
+2. If direct download fails, try the primary CORS proxy (corsproxy.io)
+3. If that fails, try the fallback proxy (api.allorigins.win)
+4. Provide clear error messages if all attempts fail
 
-The download process will:
-1. Try the primary CORS proxy (corsproxy.io)
-2. If that fails, try the fallback proxy (api.allorigins.win)
-3. Provide clear error messages if all proxies fail
+This approach prioritizes direct downloads when the server has proper CORS configuration, while maintaining compatibility with servers that don't support CORS.
 
-All of this happens automatically in the browser - no server setup required!
+### Server-Side CORS Configuration
 
-### Testing CORS Proxies
+If you're hosting the .img.gz files on your own server, ensure it sends the following CORS headers:
+- `Access-Control-Allow-Origin: *`
+- `Access-Control-Allow-Methods: GET, HEAD, OPTIONS`
+- `Access-Control-Allow-Headers: Range, Content-Type`
+- `Access-Control-Expose-Headers: Content-Length, Content-Range, Accept-Ranges, Content-Encoding`
+- `Accept-Ranges: bytes`
+- `Content-Type: application/gzip`
 
-If you want to verify that the CORS proxies are working correctly, open `test-cors-proxy.html` in your browser. This test page will check each proxy and report which ones are accessible.
+The repository includes configuration files for common hosting platforms:
+- **Netlify**: `_headers` file
+- **Apache**: `.htaccess` file  
+- **Vercel**: `vercel.json` file
+- **http-server (Node)**: `http-server.config.json` file
+
+### Testing CORS Configuration
+
+If you want to verify that your server's CORS configuration is working correctly, open `test-cors-proxy.html` in your browser. This test page will check both direct download and CORS proxies, reporting which methods are accessible.
 
 ### Alternative: Download the Image Locally
 
-If you prefer not to use any proxy service, you can download the image file manually:
+If you prefer not to use any remote service, you can download the image file manually:
 
 1. **Download the image**:
    ```bash
@@ -110,15 +125,13 @@ If you prefer not to use any proxy service, you can download the image file manu
    ```javascript
    const IMAGE_URL = 'images/alpine-midori.img.gz';
    ```
-   And update the CORS proxy URLs to an empty array:
-   ```javascript
-   const CORS_PROXY_URLS = [];
-   ```
 
-3. **Start the server**:
+3. **Start the server with CORS enabled**:
    ```bash
-   npx http-server -p 8000 --cors
+   npx http-server -p 8000 -c http-server.config.json
    ```
+   
+   The included `http-server.config.json` file already has the proper CORS headers configured.
 
 ### Why Does CORS Matter?
 
@@ -126,7 +139,8 @@ If you prefer not to use any proxy service, you can download the image file manu
 - Browsers block cross-origin requests that lack proper CORS headers for security reasons
 - The error appears as `ERR_BLOCKED_BY_CLIENT` or `Failed to fetch` in the console
 - This affects all browsers (Chrome, Firefox, Safari, Edge) due to the Same-Origin Policy
-- Public CORS proxy services solve this by adding the necessary headers
+- The emulator tries direct download first (which will work if GitHub adds CORS support or if you host the files with proper headers)
+- CORS proxy services are used as a fallback when direct download fails
 
 ## License
 

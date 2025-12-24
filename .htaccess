@@ -1,8 +1,21 @@
 # Enable CORS for all origins
 <IfModule mod_headers.c>
     Header set Access-Control-Allow-Origin "*"
-    Header set Access-Control-Allow-Methods "GET, POST, OPTIONS"
-    Header set Access-Control-Allow-Headers "Content-Type, Authorization"
+    Header set Access-Control-Allow-Methods "GET, POST, OPTIONS, HEAD"
+    Header set Access-Control-Allow-Headers "Content-Type, Authorization, Range"
+    Header set Access-Control-Expose-Headers "Content-Length, Content-Range, Accept-Ranges"
+    Header set Accept-Ranges "bytes"
+    
+    # Additional headers for .img.gz files
+    <FilesMatch "\.(img\.gz|gz)$">
+        Header set Access-Control-Allow-Origin "*"
+        Header set Access-Control-Allow-Methods "GET, HEAD, OPTIONS"
+        Header set Access-Control-Allow-Headers "Range, Content-Type"
+        Header set Access-Control-Expose-Headers "Content-Length, Content-Range, Accept-Ranges, Content-Encoding"
+        Header set Accept-Ranges "bytes"
+        Header set Content-Type "application/gzip"
+        Header set Cache-Control "public, max-age=31536000"
+    </FilesMatch>
 </IfModule>
 
 # Handle preflight requests

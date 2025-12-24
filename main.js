@@ -5,7 +5,7 @@ let emulator = null;
 // Configuration: Image source and CORS proxy settings
 const IMAGE_URL = 'https://github.com/sriail/file-serving/releases/download/browser-packages/alpine-midori.img.gz';
 
-// GitHub releases don't support CORS, so we use multiple reliable public CORS proxies
+// CORS proxies as fallback only - we'll try direct download first
 // These are free, public services that add CORS headers to any URL
 const CORS_PROXY_URLS = [
     'https://corsproxy.io/?',                    // corsproxy.io - reliable and fast
@@ -55,17 +55,22 @@ async function fetchAndDecompress(url) {
         throw new Error('Invalid or unauthorized image URL');
     }
     
-    // List of URLs to try with CORS proxies
+    // List of URLs to try - direct URL first, then CORS proxies
     const urlsToTry = [];
     
-    // Try each CORS proxy (only for remote URLs)
+    // For remote URLs, try direct download first
+    if (!isLocalPath) {
+        urlsToTry.push(url);
+    }
+    
+    // Add CORS proxies as fallback (only for remote URLs)
     if (!isLocalPath && CORS_PROXY_URLS.length > 0) {
         for (const proxyUrl of CORS_PROXY_URLS) {
             urlsToTry.push(proxyUrl + encodeURIComponent(url));
         }
     }
     
-    // If no CORS proxies are configured or it's a local path, try the direct URL
+    // If it's a local path and no URLs were added, use the path directly
     if (urlsToTry.length === 0) {
         urlsToTry.push(url);
     }
@@ -93,7 +98,8 @@ async function fetchAndDecompress(url) {
                     mode: 'cors',
                     credentials: 'omit',
                     headers: {
-                        'Accept': 'application/gzip, application/octet-stream'
+                        'Accept': 'application/gzip, application/octet-stream',
+                        'Range': 'bytes=0-' // Support range requests for better streaming
                     },
                     signal: controller.signal
                 });
@@ -172,7 +178,8 @@ async function fetchAndDecompress(url) {
             
             // If this isn't the last URL, try the next one
             if (i < urlsToTry.length - 1) {
-                updateStatus(`Download failed, trying alternative proxy (${i + 2}/${urlsToTry.length})...`);
+                const nextAttempt = i === 0 && !isLocalPath ? 'CORS proxy' : 'alternative proxy';
+                updateStatus(`Download failed, trying ${nextAttempt} (${i + 2}/${urlsToTry.length})...`);
                 continue;
             }
         }
@@ -189,7 +196,7 @@ async function fetchAndDecompress(url) {
         (errorMsg.includes('failed to fetch') || 
          errorMsg.includes('networkerror') || 
          errorMsg.includes('cors'))) {
-        updateStatus('Error: Unable to download image. All CORS proxies failed. Please check your internet connection or try again later.');
+        updateStatus('Error: Unable to download image. Direct download and CORS proxies failed. Please ensure the server has proper CORS headers or try again later.');
     } else if (lastError.name === 'TypeError') {
         updateStatus('Error: Network error - ' + lastError.message + '. Check your internet connection.');
     } else {
