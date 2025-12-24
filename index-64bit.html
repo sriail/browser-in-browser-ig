@@ -173,11 +173,21 @@
 
         <h2>Building Your Own QEMU-wasm Setup</h2>
         <p>
-            To create a custom QEMU-wasm emulator with your own OS images, you need to:
+            To create a custom QEMU-wasm emulator with your own OS images:
         </p>
+        
+        <h3>Prerequisites</h3>
+        <ul>
+            <li>Docker installed and running</li>
+            <li>Git</li>
+            <li>At least 8GB of free disk space</li>
+            <li>Approximately 2-3 hours for a full build</li>
+        </ul>
+        
+        <h3>Build Steps</h3>
         <ol>
             <li>Clone the QEMU-wasm repository: <code>git clone https://github.com/ktock/qemu-wasm.git</code></li>
-            <li>Build QEMU with Emscripten (requires Docker):</li>
+            <li>Build QEMU with Emscripten using Docker (see repository for detailed instructions)</li>
         </ol>
         <pre><code>cd qemu-wasm
 docker build -t qemu-wasm .
@@ -250,7 +260,10 @@ docker build -t qemu-wasm .
         document.getElementById('startDemo').addEventListener('click', function() {
             updateStatus('Redirecting to QEMU-wasm demo...');
             // Redirect to the ktock QEMU-wasm demo
-            window.open('https://ktock.github.io/qemu-wasm-demo/alpine-x86_64.html', '_blank');
+            const demoWindow = window.open('https://ktock.github.io/qemu-wasm-demo/alpine-x86_64.html', '_blank', 'noopener,noreferrer');
+            if (!demoWindow) {
+                updateStatus('Popup blocked. Please allow popups for this site or manually visit: https://ktock.github.io/qemu-wasm-demo/alpine-x86_64.html');
+            }
         });
 
         // Navigate back to v86

@@ -73,7 +73,7 @@ Navigate to `http://localhost:8000` in your web browser to use the v86 (32-bit) 
 
 For 64-bit x86_64 emulation:
 
-1. Follow steps 2 above to run a local web server
+1. Follow the "Run a Local Web Server" step from the v86 setup above
 2. Navigate to `http://localhost:8000/index-64bit.html`
 3. Click "Launch QEMU Demo" to try the 64-bit Alpine Linux demo
 4. For custom setups, follow the build instructions on the page
