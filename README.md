@@ -1,4 +1,4 @@
-# Browser in Browser - QEMU 64-bit Emulator
+# Browser in Browser - v86 based Emulator
 
 A simple web-based 64-bit x86_64 emulator using QEMU compiled to WebAssembly.
 
