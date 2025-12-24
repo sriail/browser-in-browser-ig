@@ -6,6 +6,11 @@ let emulator = null;
 // Place your alpine-midori.img file in the images/ folder
 const IMAGE_URL = 'images/alpine-midori.img';
 
+// Optional: Set the expected image size in bytes for progress tracking
+// 8GB = 8 * 1024 * 1024 * 1024 bytes = 8589934592 bytes
+// Leave as null if unknown - v86 will still work without it
+const IMAGE_SIZE = 8 * 1024 * 1024 * 1024; // 8GB
+
 // Constants for better readability
 const BYTES_PER_MB = 1024 * 1024;
 
@@ -14,49 +19,6 @@ function updateStatus(message, show = true) {
     const statusDiv = document.getElementById('status');
     statusDiv.textContent = message;
     statusDiv.style.display = show ? 'block' : 'none';
-}
-
-// Function to fetch the .img file from local storage
-async function fetchImage(url) {
-    updateStatus('Loading image file...');
-    
-    console.log('Loading image from:', url);
-    
-    try {
-        // Fetch the local file
-        const response = await fetch(url);
-        
-        if (!response.ok) {
-            throw new Error(`Failed to load image file. Status: ${response.status}. Make sure you have placed alpine-midori.img in the images/ folder.`);
-        }
-        
-        // Get content length for progress tracking
-        const contentLength = response.headers.get('content-length');
-        const totalBytes = contentLength ? parseInt(contentLength, 10) : 0;
-        
-        updateStatus('Reading image file...');
-        console.log('Loading image, size:', totalBytes, 'bytes');
-        
-        // Read the response as an ArrayBuffer
-        const arrayBuffer = await response.arrayBuffer();
-        
-        updateStatus('Image ready, initializing emulator...');
-        console.log('Successfully loaded image');
-        console.log('Image size:', arrayBuffer.byteLength, 'bytes');
-        return arrayBuffer;
-    } catch (error) {
-        console.error('Failed to load image:', error);
-        
-        // Provide helpful error message
-        if (error.message.includes('Status: 404')) {
-            updateStatus('Error: Image file not found. Please download alpine-midori.img and place it in the images/ folder. See images/README.md for instructions.');
-        } else if (error.name === 'TypeError' && error.message.toLowerCase().includes('failed to fetch')) {
-            updateStatus('Error: Failed to load image file. Make sure alpine-midori.img is in the images/ folder and you are running a local web server.');
-        } else {
-            updateStatus('Error: ' + error.message);
-        }
-        throw error;
-    }
 }
 
 // Function to start the emulator
@@ -76,20 +38,13 @@ async function startEmulator() {
     
     try {
         console.log('Starting emulator with RAM:', ramMB, 'MB, VRAM:', vramMB, 'MB');
+        console.log('Using async loading for disk image:', IMAGE_URL);
         
-        // Load the image file
-        const imgBuffer = await fetchImage(IMAGE_URL);
+        updateStatus('Initializing emulator with async disk image loading...');
         
-        console.log('Image loaded, size:', imgBuffer.byteLength, 'bytes');
-        console.log('Image buffer type:', imgBuffer.constructor.name);
-        console.log('Initializing V86 with', ramMB, 'MB RAM and', vramMB, 'MB VRAM');
-        
-        // Verify the buffer is valid
-        if (!imgBuffer || imgBuffer.byteLength === 0) {
-            throw new Error('Invalid image buffer - buffer is empty or null');
-        }
-        
-        // Initialize v86 emulator with the decompressed image buffer
+        // Initialize v86 emulator with async URL-based loading
+        // This allows v86 to fetch the large disk image in chunks as needed
+        // instead of loading the entire file into memory
         emulator = new V86({
             wasm_path: "v86.wasm",
             screen_container: document.getElementById("screen_container"),
@@ -100,7 +55,9 @@ async function startEmulator() {
                 url: "bios/vgabios.bin",
             },
             hda: {
-                buffer: imgBuffer,
+                url: IMAGE_URL,
+                async: true,
+                size: IMAGE_SIZE,
             },
             memory_size: ramBytes,
             vga_memory_size: vramBytes,
@@ -109,19 +66,47 @@ async function startEmulator() {
         
         console.log('V86 emulator instance created successfully');
         
-        updateStatus('Emulator started successfully!');
-        startButton.textContent = 'Running';
+        updateStatus('Emulator loading... The disk image will be fetched as needed.');
+        startButton.textContent = 'Loading...';
         
-        // Optional: Add event listeners for emulator state
+        // Add event listeners for emulator state and download progress
         emulator.add_listener("emulator-ready", function() {
             console.log("Emulator is ready");
+            updateStatus('Emulator ready! Booting...');
+        });
+        
+        emulator.add_listener("emulator-loaded", function() {
+            console.log("Emulator loaded");
+            updateStatus('Emulator started successfully!');
+            startButton.textContent = 'Running';
+        });
+        
+        emulator.add_listener("download-progress", function(e) {
+            if (e.file_name && (e.file_name === IMAGE_URL || e.file_name.endsWith(IMAGE_URL))) {
+                const percent = e.lengthComputable && e.total > 0 ? 
+                    Math.round((e.loaded / e.total) * 100) : 0;
+                if (percent > 0) {
+                    updateStatus(`Loading disk image: ${percent}% (${Math.round(e.loaded / BYTES_PER_MB)} MB / ${Math.round(e.total / BYTES_PER_MB)} MB)`);
+                } else {
+                    updateStatus(`Loading disk image: ${Math.round(e.loaded / BYTES_PER_MB)} MB loaded...`);
+                }
+            }
+        });
+        
+        emulator.add_listener("download-error", function(e) {
+            console.error("Download error:", e);
+            if (e.file_name && (e.file_name === IMAGE_URL || e.file_name.endsWith(IMAGE_URL))) {
+                updateStatus('Error: Failed to load disk image. Make sure alpine-midori.img is in the images/ folder and you are running a local web server.');
+                startButton.disabled = false;
+                startButton.textContent = 'Start';
+            }
         });
         
     } catch (error) {
         console.error('Failed to start emulator:', error);
         updateStatus('Failed to start emulator: ' + error.message);
         startButton.disabled = false;
-        startButton.textContent = 'Start Emulator';
+        startButton.textContent = 'Start';
     }
 }
 
