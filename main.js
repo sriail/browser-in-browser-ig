@@ -74,35 +74,89 @@ async function fetchAndDecompress(url) {
         console.log(`Attempt ${i + 1}/${urlsToTry.length}: Trying URL:`, tryUrl);
         
         try {
-            // Fetch with explicit CORS mode to get better error messages
-            const response = await fetch(tryUrl, {
-                mode: 'cors',
-                credentials: 'omit',
-                headers: {
-                    'Accept': 'application/gzip, application/octet-stream'
+            // Create an AbortController for timeout handling
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => {
+                controller.abort();
+                console.warn('Request timeout - aborting fetch');
+            }, 300000); // 5 minute timeout for large files
+            
+            try {
+                // Fetch with explicit CORS mode and abort signal
+                const response = await fetch(tryUrl, {
+                    mode: 'cors',
+                    credentials: 'omit',
+                    headers: {
+                        'Accept': 'application/gzip, application/octet-stream'
+                    },
+                    signal: controller.signal
+                });
+                
+                clearTimeout(timeoutId);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
                 }
-            });
-            
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                
+                // Get content length for progress tracking
+                const contentLength = response.headers.get('content-length');
+                const totalBytes = contentLength ? parseInt(contentLength, 10) : 0;
+                
+                updateStatus('Decompressing image file...');
+                console.log('Starting decompression, compressed size:', totalBytes, 'bytes');
+                
+                // Use the Compression Streams API to decompress the gzip file
+                const ds = new DecompressionStream("gzip");
+                const decompressedStream = response.body.pipeThrough(ds);
+                
+                // Read the decompressed stream in chunks for better memory management
+                const reader = decompressedStream.getReader();
+                const chunks = [];
+                let receivedBytes = 0;
+                
+                while (true) {
+                    const { done, value } = await reader.read();
+                    
+                    if (done) {
+                        break;
+                    }
+                    
+                    chunks.push(value);
+                    receivedBytes += value.length;
+                    
+                    // Update status every MB for better feedback
+                    if (receivedBytes % (1024 * 1024) < value.length) {
+                        updateStatus(`Decompressing... ${Math.floor(receivedBytes / (1024 * 1024))} MB decompressed`);
+                    }
+                }
+                
+                // Combine all chunks into a single ArrayBuffer
+                const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
+                const arrayBuffer = new ArrayBuffer(totalLength);
+                const uint8View = new Uint8Array(arrayBuffer);
+                
+                let offset = 0;
+                for (const chunk of chunks) {
+                    uint8View.set(chunk, offset);
+                    offset += chunk.length;
+                }
+                
+                updateStatus('Image ready, initializing emulator...');
+                console.log('Successfully downloaded and decompressed image from:', tryUrl);
+                console.log('Decompressed size:', totalLength, 'bytes');
+                return arrayBuffer;
+            } finally {
+                clearTimeout(timeoutId);
             }
-            
-            updateStatus('Decompressing image file...');
-            
-            // Use the Compression Streams API to decompress the gzip file
-            const ds = new DecompressionStream("gzip");
-            const decompressedStream = response.body.pipeThrough(ds);
-            
-            // Convert the stream to an ArrayBuffer for v86
-            const decompressedResponse = new Response(decompressedStream);
-            const arrayBuffer = await decompressedResponse.arrayBuffer();
-            
-            updateStatus('Image ready, initializing emulator...');
-            console.log('Successfully downloaded and decompressed image from:', tryUrl);
-            return arrayBuffer;
         } catch (error) {
             console.warn(`Failed with URL ${tryUrl}:`, error.message);
             lastError = error;
+            
+            // Check if error is due to abort
+            if (error.name === 'AbortError') {
+                console.error('Download was aborted due to timeout or manual cancellation');
+                lastError = new Error('Download timeout - the file is too large or connection is too slow. Please try again or use a faster connection.');
+            }
             
             // If this isn't the last URL, try the next one
             if (i < urlsToTry.length - 1) {
@@ -117,7 +171,9 @@ async function fetchAndDecompress(url) {
     
     // Provide more helpful error message for CORS and network issues
     const errorMsg = lastError.message.toLowerCase();
-    if (lastError.name === 'TypeError' && 
+    if (lastError.name === 'AbortError' || errorMsg.includes('abort')) {
+        updateStatus('Error: Download was aborted. ' + lastError.message);
+    } else if (lastError.name === 'TypeError' && 
         (errorMsg.includes('failed to fetch') || 
          errorMsg.includes('networkerror') || 
          errorMsg.includes('cors'))) {
@@ -152,8 +208,15 @@ async function startEmulator() {
         const imgBuffer = await fetchAndDecompress(IMAGE_URL);
         
         console.log('Image decompressed, size:', imgBuffer.byteLength, 'bytes');
+        console.log('Image buffer type:', imgBuffer.constructor.name);
+        console.log('Initializing V86 with', ramMB, 'MB RAM and', vramMB, 'MB VRAM');
         
-        // Initialize v86 emulator
+        // Verify the buffer is valid
+        if (!imgBuffer || imgBuffer.byteLength === 0) {
+            throw new Error('Invalid image buffer - buffer is empty or null');
+        }
+        
+        // Initialize v86 emulator with the decompressed image buffer
         emulator = new V86({
             screen_container: document.getElementById("screen_container"),
             bios: {
@@ -169,6 +232,8 @@ async function startEmulator() {
             vga_memory_size: vramBytes,
             autostart: true,
         });
+        
+        console.log('V86 emulator instance created successfully');
         
         updateStatus('Emulator started successfully!');
         startButton.textContent = 'Running';
