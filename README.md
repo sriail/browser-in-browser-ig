@@ -67,6 +67,7 @@ Navigate to `http://localhost:8000` in your web browser.
 - **OS Image**: Alpine Linux with Midori browser
 - **Image Location**: `images/alpine-midori.img` (downloaded and extracted separately)
 - **Emulator**: v86 (x86 emulator in JavaScript/WebAssembly)
+- **Image Loading**: Large disk images (up to 8GB) are loaded asynchronously by v86, fetching data on-demand rather than loading the entire file into memory
 
 ## File Structure
 
@@ -86,8 +87,10 @@ Navigate to `http://localhost:8000` in your web browser.
 
 ## Notes
 
-- The OS image file is loaded locally from the `images/` folder
-- Large images may take time to load (the Alpine image is ~1GB uncompressed)
+- The OS image file is loaded asynchronously by the v86 emulator
+- Large images (up to 8GB) are fetched on-demand in chunks, not loaded entirely into memory
+- The emulator will start quickly and fetch disk data as needed during operation
+- Initial boot may be slower as the emulator fetches necessary blocks from the image
 - The emulator requires WebAssembly support
 
 ## Troubleshooting
