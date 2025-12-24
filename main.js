@@ -13,6 +13,10 @@ const CORS_PROXY_URLS = [
     // Note: cors-anywhere may have rate limits on public deployments
 ];
 
+// Constants for better readability
+const BYTES_PER_MB = 1024 * 1024;
+const DOWNLOAD_TIMEOUT_MS = 300000; // 5 minutes
+
 // Function to update status message
 function updateStatus(message, show = true) {
     const statusDiv = document.getElementById('status');
@@ -79,7 +83,7 @@ async function fetchAndDecompress(url) {
             const timeoutId = setTimeout(() => {
                 controller.abort();
                 console.warn('Request timeout - aborting fetch');
-            }, 300000); // 5 minute timeout for large files
+            }, DOWNLOAD_TIMEOUT_MS);
             
             try {
                 // Fetch with explicit CORS mode and abort signal
@@ -125,8 +129,8 @@ async function fetchAndDecompress(url) {
                     receivedBytes += value.length;
                     
                     // Update status every MB for better feedback
-                    if (receivedBytes % (1024 * 1024) < value.length) {
-                        updateStatus(`Decompressing... ${Math.floor(receivedBytes / (1024 * 1024))} MB decompressed`);
+                    if (receivedBytes % BYTES_PER_MB < value.length) {
+                        updateStatus(`Decompressing... ${Math.floor(receivedBytes / BYTES_PER_MB)} MB decompressed`);
                     }
                 }
                 
@@ -198,8 +202,8 @@ async function startEmulator() {
     const vramMB = parseInt(document.getElementById('vram').value);
     
     // Convert MB to bytes
-    const ramBytes = ramMB * 1024 * 1024;
-    const vramBytes = vramMB * 1024 * 1024;
+    const ramBytes = ramMB * BYTES_PER_MB;
+    const vramBytes = vramMB * BYTES_PER_MB;
     
     try {
         console.log('Starting emulator with RAM:', ramMB, 'MB, VRAM:', vramMB, 'MB');
